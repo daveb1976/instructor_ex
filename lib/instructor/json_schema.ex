@@ -131,12 +131,17 @@ defmodule Instructor.JSONSchema do
        when is_ecto_schema(ecto_schema) do
     seen_schemas = MapSet.put(seen_schemas, ecto_schema)
 
+    # Create a new struct to get the default values
+    defaults = struct(ecto_schema)
+
     properties =
       ecto_schema.__schema__(:fields)
       |> Enum.map(fn field ->
         type = ecto_schema.__schema__(:type, field)
+        default = Map.get(defaults, field)
         value = for_type(type)
         value = Map.merge(%{title: Atom.to_string(field)}, value)
+        value = if default != nil, do: Map.put(value, :default, default), else: value
 
         {field, value}
       end)
@@ -166,7 +171,16 @@ defmodule Instructor.JSONSchema do
       |> Enum.into(%{})
 
     properties = Map.merge(properties, associations)
-    required = Map.keys(properties) |> Enum.sort()
+
+    # Only include fields without defaults in required list
+    required =
+      ecto_schema.__schema__(:fields)
+      |> Enum.reject(fn field ->
+        Map.get(defaults, field) != nil
+      end)
+      |> Enum.concat(Map.keys(associations))
+      |> Enum.sort()
+
     title = title_for(ecto_schema)
 
     associated_schemas =
@@ -447,7 +461,8 @@ defmodule Instructor.JSONSchema do
     |> maybe_call_with_path(fun, path, opts)
   end
 
-  defp do_traverse_and_update(tree, fun, path, opts), do: maybe_call_with_path(tree, fun, path, opts)
+  defp do_traverse_and_update(tree, fun, path, opts),
+    do: maybe_call_with_path(tree, fun, path, opts)
 
   defp maybe_call_with_path(value, fun, path, opts) do
     if Keyword.get(opts, :include_path, false) do

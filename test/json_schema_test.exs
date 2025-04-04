@@ -534,4 +534,100 @@ defmodule JSONSchemaTest do
 
     assert json_schema == expected_json_schema
   end
+
+  test "schema with defaults" do
+    defmodule DemoWithDefaults do
+      use Ecto.Schema
+      use Instructor
+
+      @primary_key false
+      schema "demo_with_defaults" do
+        field(:required_string, :string)
+        field(:optional_string, :string, default: "default value")
+        field(:optional_int, :integer, default: 42)
+      end
+    end
+
+    json_schema =
+      JSONSchema.from_ecto_schema(JSONSchemaTest.DemoWithDefaults)
+      |> Jason.decode!()
+
+    expected_json_schema =
+      %{
+        "description" => "",
+        "properties" => %{
+          "required_string" => %{
+            "title" => "required_string",
+            "type" => "string",
+            "description" => "String, e.g. 'hello'"
+          },
+          "optional_string" => %{
+            "title" => "optional_string",
+            "type" => "string",
+            "description" => "String, e.g. 'hello'",
+            "default" => "default value"
+          },
+          "optional_int" => %{
+            "title" => "optional_int",
+            "type" => "integer",
+            "description" => "Integer, e.g. 1",
+            "default" => 42
+          }
+        },
+        "required" => ["required_string"],
+        "title" => "JSONSchemaTest.DemoWithDefaults",
+        "type" => "object",
+        "additionalProperties" => false
+      }
+
+    assert json_schema == expected_json_schema
+  end
+
+  test "embedded schema with defaults" do
+    defmodule EmbeddedWithDefaults do
+      use Ecto.Schema
+      use Instructor
+
+      @primary_key false
+      embedded_schema do
+        field(:required_string, :string)
+        field(:optional_string, :string, default: "default value")
+        field(:optional_int, :integer, default: 42)
+      end
+    end
+
+    json_schema =
+      JSONSchema.from_ecto_schema(JSONSchemaTest.EmbeddedWithDefaults)
+      |> Jason.decode!()
+
+    expected_json_schema =
+      %{
+        "description" => "",
+        "properties" => %{
+          "required_string" => %{
+            "title" => "required_string",
+            "type" => "string",
+            "description" => "String, e.g. 'hello'"
+          },
+          "optional_string" => %{
+            "title" => "optional_string",
+            "type" => "string",
+            "description" => "String, e.g. 'hello'",
+            "default" => "default value"
+          },
+          "optional_int" => %{
+            "title" => "optional_int",
+            "type" => "integer",
+            "description" => "Integer, e.g. 1",
+            "default" => 42
+          }
+        },
+        "required" => ["required_string"],
+        "title" => "JSONSchemaTest.EmbeddedWithDefaults",
+        "type" => "object",
+        "additionalProperties" => false
+      }
+
+    assert json_schema == expected_json_schema
+  end
 end
